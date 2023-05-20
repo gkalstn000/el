@@ -35,7 +35,7 @@ class ELDataset(BaseDataset) :
             self.load_size = (opt.load_size, opt.load_size)
         else:
             self.load_size = opt.load_size
-        self.edge_crop = [52, 60, 54, 118]
+
         transform_list=[]
         # transform_list.append(transforms.Resize(size=self.load_size))
         transform_list.append(transforms.ToTensor())
@@ -64,16 +64,9 @@ class ELDataset(BaseDataset) :
             image_path = os.path.join(self.fault_image_dir, image_name)
 
         img = Image.open(image_path)
-
+        img = self.edge_corp(img)
         # 테두리 crop
-        w, h = img.size
-        left, top, right, bot = self.edge_crop
-        img = img.crop([left, top, w-right, h-bot])
-        w_crop, h_crop = img.size
-        img_left = img.crop([0, 0, w_crop // 2 - 17, h_crop])
-        img_right = img.crop([w_crop // 2 + 17, 0, w_crop, h_crop])
 
-        img = self.get_concat_h(img_left, img_right)
         w, h = img.size
         dw, dh = w / 26, h / 6
         cells = []
@@ -87,7 +80,18 @@ class ELDataset(BaseDataset) :
 
         return cells
 
+    def edge_corp(self, img):
+        w, h = img.size
+        left, top, right, bot = [61, 66, 58, 123]
+        img = img.crop([left, top, w-right, h-bot])
+        w_crop, h_crop = img.size
 
+        img_left = img.crop([0, 0, w_crop // 2 - 25, h_crop])
+        img_right = img.crop([w_crop // 2 + 25, 0, w_crop, h_crop])
+
+        img = self.get_concat_h(img_left, img_right)
+
+        return img
     def postprocess(self, input_dict):
         return input_dict
 
