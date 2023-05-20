@@ -1,0 +1,1 @@
+nohup python train.py --id anogan --gpu_ids 3 --batchSize 2 --tf_log > anogan.out &

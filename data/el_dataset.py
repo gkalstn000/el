@@ -12,34 +12,30 @@ import numpy as np
 import time
 
 
-class FashionDataset(BaseDataset) :
+class ELDataset(BaseDataset) :
 
     @staticmethod
     def modify_commandline_options(parser, is_train) :
-        parser.set_defaults(load_size=(256, 256))
-        parser.set_defaults(old_size=(256, 176))
-        parser.set_defaults(image_nc=3)
-        # parser.add_argument(pose_nc=41)
-        parser.set_defaults(display_winsize=256)
-        parser.set_defaults(crop_size=256)
+        parser.set_defaults(load_size=(128, 128))
+        parser.set_defaults(old_size=(7780, 3600))
+        # parser.set_defaults(image_nc=3)
+        # # parser.add_argument(pose_nc=41)
+        # parser.set_defaults(display_winsize=256)
+        # parser.set_defaults(crop_size=256)
         return parser
 
     def initialize(self, opt):
         self.opt = opt
         self.phase = opt.phase
-        self.image_dir, self.bone_file, self.name_pairs = self.get_paths(opt)
-        size = len(self.name_pairs)
+        self.df, self.fault_name_list, self.nonfault_name_list = self.get_paths(opt)
+        size = len(self.nonfault_name_list) if self.phase == 'train' else len(self.fault_name_list)
         self.dataset_size = size
 
         if isinstance(opt.load_size, int):
             self.load_size = (opt.load_size, opt.load_size)
         else:
             self.load_size = opt.load_size
-
-
-        # transform_list.append(transforms.Resize(size=self.load_size))
-        self.annotation_file = pd.read_csv(self.bone_file, sep=':').set_index('name')
-
+        self.edge_crop = [52, 60, 54, 118]
         transform_list=[]
         # transform_list.append(transforms.Resize(size=self.load_size))
         transform_list.append(transforms.ToTensor())
@@ -48,52 +44,48 @@ class FashionDataset(BaseDataset) :
 
     def get_paths(self, opt):
         root = opt.dataroot
-        pairLst = os.path.join(root, f'fashion-pairs-{self.phase}.csv')
-        name_pairs = self.init_categories(pairLst)
+        df = pd.read_csv(os.path.join(root, 'df_label.csv'))
 
-        image_dir = os.path.join(root, f'{self.phase}_higher')
-        bonesLst = os.path.join(root, f'fashion-annotation-{self.phase}.csv')
-        return image_dir, bonesLst, name_pairs
+        self.fault_image_dir = os.path.join(root, f'fault')
+        self.nonfault_image_dir = os.path.join(root, f'non_fault')
+        fault_name_list = os.listdir(self.fault_image_dir)
+        nonfault_name_list = os.listdir(self.nonfault_image_dir)
 
-    def init_categories(self, pairLst):
-        pairs_file_train = pd.read_csv(pairLst)
-        size = len(pairs_file_train)
-        pairs = []
-        for i in trange(size, desc = 'Loading data pairs ...'):
-            pair = [pairs_file_train.iloc[i]['from'], pairs_file_train.iloc[i]['to']]
-            pairs.append(pair)
+        return df, fault_name_list, nonfault_name_list
 
-        print('Loading data pairs finished ...')
-        return pairs
+
 
     def __getitem__(self, index):
-        P1_name, P2_name = self.name_pairs[index]
-        PC_name = f'{P1_name.replace(".jpg", "")}_2_{P2_name.replace(".jpg", "")}_vis.jpg'
+        if self.phase == 'train' :
+            image_name = self.nonfault_name_list[index]
+            image_path = os.path.join(self.nonfault_image_dir, image_name)
+        else :
+            image_name = self.fault_name_list[index]
+            image_path = os.path.join(self.fault_image_dir, image_name)
 
-        P1_path = os.path.join(self.image_dir, P1_name) # person 1
-        P2_path = os.path.join(self.image_dir, P2_name) # person 2
+        img = Image.open(image_path)
 
-        P1_img = Image.open(P1_path).convert('RGB')
-        P2_img = Image.open(P2_path).convert('RGB')
+        # 테두리 crop
+        w, h = img.size
+        left, top, right, bot = self.edge_crop
+        img = img.crop([left, top, w-right, h-bot])
+        w_crop, h_crop = img.size
+        img_left = img.crop([0, 0, w_crop // 2 - 17, h_crop])
+        img_right = img.crop([w_crop // 2 + 17, 0, w_crop, h_crop])
 
-        P1_img = F.resize(P1_img, self.load_size)
-        P2_img = F.resize(P2_img, self.load_size)
+        img = self.get_concat_h(img_left, img_right)
+        w, h = img.size
+        dw, dh = w / 26, h / 6
+        cells = []
+        for i in range(6) :
+            for j in range(26) :
+                cell = img.crop([j * dw, i * dh, (j+1) * dw, (i+1) * dh])
+                cell = F.resize(cell, self.load_size)
+                cell_tensor = self.trans(cell)
+                cells.append(cell_tensor)
+        cells = torch.stack(cells)
 
-        P1 = self.trans(P1_img)
-        P2 = self.trans(P2_img)
-
-        B1 = self.obtain_bone(P1_name)
-        B2 = self.obtain_bone(P2_name)
-
-
-        input_dict = {'P1' : P1,
-                      'B1': B1,
-                      'P2': P2,
-                      'B2': B2,
-                      'path': PC_name}
-
-
-        return input_dict
+        return cells
 
 
     def postprocess(self, input_dict):
@@ -101,5 +93,11 @@ class FashionDataset(BaseDataset) :
 
     def __len__(self):
         return self.dataset_size
+
+    def get_concat_h(self, im1, im2):
+        dst = Image.new('RGB', (im1.width + im2.width, im1.height))
+        dst.paste(im1, (0, 0))
+        dst.paste(im2, (im1.width, 0))
+        return dst
 
 

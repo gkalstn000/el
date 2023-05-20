@@ -20,13 +20,21 @@ class BaseOptions():
     def initialize(self, parser):
         # experiment specifics
         parser.add_argument('--id', type=str, default='spain', help='name of the experiment. It decides where to store samples and models')
+        parser.add_argument('--name', type=str, default='test', help='name of the experiment. It decides where to store samples and models')
+        parser.add_argument('--model', type=str, default='anogan',help='name of the model.')
+        parser.add_argument('--norm_E', type=str, default='spectralinstance',
+                            help='[spectralinstance|spectralbatch|spectralsyncbatch]')
+        parser.add_argument('--norm_G', type=str, default='spectralsyncbatch',
+                            help='[spectralinstance|spectralbatch|spectralsyncbatch]')
+        parser.add_argument('--norm_D', type=str, default='spectralinstance',
+                            help='[spectralinstance|spectralbatch|spectralsyncbatch]')
         parser.add_argument('--gpu_ids', type=str, default='0', help='gpu ids: e.g. 0  0,1,2, 0,2. use -1 for CPU')
         parser.add_argument('--checkpoints_dir', type=str, default='./checkpoints', help='models are saved here')
         parser.add_argument('--phase', type=str, default='train', help='train, val, test, etc')
 
         # input/output sizes
         parser.add_argument('--dataset_mode', type=str, default='el')
-        parser.add_argument('--batchSize', type=int, default=69, help='input batch size')
+        parser.add_argument('--batchSize', type=int, default=4, help='input batch size')
         parser.add_argument('--image_nc', type=int, default=3, help='# of input image channels.')
         parser.add_argument('--output_nc', type=int, default=3, help='# of output image channels')
         # for setting inputs
@@ -34,13 +42,22 @@ class BaseOptions():
         parser.add_argument('--max_dataset_size', type=int, default=sys.maxsize, help='Maximum number of samples allowed per dataset. If the dataset directory contains more than max_dataset_size, only a subset is loaded.')
         parser.add_argument('--load_from_opt_file', action='store_true', help='load the options from checkpoints and use that as default')
         parser.add_argument('--preprocess_mode', type=str, default='scale_width_and_crop', help='scaling and cropping of images at load time.', choices=("resize_and_crop", "crop", "scale_width", "scale_width_and_crop", "scale_shortside", "fixed", "none"))
-        parser.add_argument('--num_workers', type=int, default=15, help='number of batchloader workers')
+        parser.add_argument('--num_workers', type=int, default=2, help='number of batchloader workers')
         parser.add_argument('--img_f', type=int, default=512, help="the largest feature channels")
 
         # for displays
         parser.add_argument('--display_winsize', type=int, default=400, help='display window size')
 
+        # for generator
+        parser.add_argument('--netG', type=str, default='el', help='selects model to use for netG (spade | spain)')
+        parser.add_argument('--ngf', type=int, default=8, help='# of gen filters in first conv layer')
+        parser.add_argument('--nef', type=int, default=8, help='# of encoder filters in first conv layer')
+        parser.add_argument('--init_type', type=str, default='xavier', help='network initialization [normal|xavier|kaiming|orthogonal]')
+        parser.add_argument('--init_variance', type=float, default=0.02, help='variance of the initialization distribution')
+        parser.add_argument('--use_spect_g', action='store_false', help='use spectual normalization in generator')
+        parser.add_argument('--use_coord', action='store_true', help='use coordconv')
         self.initialized = True
+
         return parser
 
     def gather_options(self):
@@ -53,6 +70,10 @@ class BaseOptions():
         # get the basic options
         opt, unknown = parser.parse_known_args()
 
+        # modify model-related parser options
+        model_name = opt.model
+        model_option_setter = models.get_option_setter(model_name)
+        parser = model_option_setter(parser, self.isTrain)
         # modify dataset-related parser options
         dataset_mode = opt.dataset_mode
         dataset_option_setter = data.get_option_setter(dataset_mode)
