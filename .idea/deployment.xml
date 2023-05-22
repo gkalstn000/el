@@ -7,6 +7,9 @@
           <mappings>
             <mapping deploy="/home/minsu/el_project" local="$PROJECT_DIR$" />
           </mappings>
+          <excludedPaths>
+            <excludedPath path="/home/minsu/el_project/checkpoints" />
+          </excludedPaths>
         </serverdata>
       </paths>
     </serverData>

@@ -39,7 +39,7 @@ class ELDataset(BaseDataset) :
         transform_list=[]
         # transform_list.append(transforms.Resize(size=self.load_size))
         transform_list.append(transforms.ToTensor())
-        transform_list.append(transforms.Normalize((0.5, 0.5, 0.5),(0.5, 0.5, 0.5)))
+        transform_list.append(transforms.Normalize(0.5,0.5))
         self.trans = transforms.Compose(transform_list)
 
     def get_paths(self, opt):
@@ -63,7 +63,7 @@ class ELDataset(BaseDataset) :
             image_name = self.fault_name_list[index]
             image_path = os.path.join(self.fault_image_dir, image_name)
 
-        img = Image.open(image_path)
+        img = Image.open(image_path).convert("1")
         img = self.edge_corp(img)
         # 테두리 crop
 
@@ -99,7 +99,7 @@ class ELDataset(BaseDataset) :
         return self.dataset_size
 
     def get_concat_h(self, im1, im2):
-        dst = Image.new('RGB', (im1.width + im2.width, im1.height))
+        dst = Image.new('1', (im1.width + im2.width, im1.height))
         dst.paste(im1, (0, 0))
         dst.paste(im2, (im1.width, 0))
         return dst
