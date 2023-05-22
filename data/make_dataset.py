@@ -34,9 +34,3 @@ for root, dirs, files in  tqdm(sorted(os.walk(os.path.join(dataroot, 'images')))
 
 label_df = pd.DataFrame.from_dict(label_dict)
 df_merged = df.merge(label_df, on='ID', how='inner')
-
-img = Image.open(os.path.join(root, filename))
-w, h = img.size
-c = 30
-crop_point = [52, 60, w-55, h-118]
-util.print_PILimg(img.crop(crop_point))
