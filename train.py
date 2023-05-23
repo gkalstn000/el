@@ -2,11 +2,12 @@ import sys
 from collections import OrderedDict
 from tqdm import tqdm
 
+import util.util as util
 from options.train_options import TrainOptions
 from trainers.trainer import Trainer
 from util.iter_counter import IterationCounter
 from util.visualizer import Visualizer
-
+from models.networks.loss import Accuracy
 import torch
 import data
 import time
@@ -29,32 +30,29 @@ trainer = Trainer(opt)
 
 iter_counter = IterationCounter(opt, len(dataloader))
 visualizer = Visualizer(opt)
-
-
+cal_acc = Accuracy()
 
 for epoch in iter_counter.training_epochs():
     iter_counter.record_epoch_start(epoch)
     for i, data_i in enumerate(tqdm(dataloader), start=iter_counter.epoch_iter):
         iter_counter.record_one_iteration()
-        if i % opt.D_steps_per_G == 0:
-            trainer.run_generator_one_step(data_i)
+        trainer.run_encoder_one_step(data_i)
 
-        # train discriminator
-        trainer.run_discriminator_one_step(data_i)
 
         if iter_counter.needs_printing():
             losses = trainer.get_latest_losses()
+            logit = trainer.get_latest_logit()
+            acc = cal_acc(logit, data_i['label'])
+            losses['Acc'] = acc
             visualizer.print_current_errors(epoch, iter_counter.epoch_iter,
                                             losses, iter_counter.time_per_iter)
             visualizer.plot_current_errors(losses, iter_counter.total_steps_so_far)
 
         if iter_counter.needs_displaying():
-            fake_image = trainer.get_latest_generated()
-            b, g, c, h, w = data_i.size()
+            logit = trainer.get_latest_logit()
+            img_tensors = util.write_text_to_img(data_i['img_tensor'], logit, data_i['label'])
 
-            visuals = OrderedDict([('train_1_original', data_i.view(b*g, c, h, w)),
-                                   ('train_2_fake', fake_image),
-                                   ('train_3_diff', torch.abs(data_i.view(b*g, c, h, w) - fake_image.detach().cpu()))
+            visuals = OrderedDict([('Image with logit', img_tensors),
                                    ])
             visualizer.display_current_results(visuals, epoch, iter_counter.total_steps_so_far)
 
@@ -65,20 +63,28 @@ for epoch in iter_counter.training_epochs():
             iter_counter.record_current_iter()
         # break
 
-    for i, data_i in tqdm(enumerate(dataloader_val), desc='Validation images generating') :
-        b, g, c, h, w = data_i.size()
 
-        fake_image = trainer.model(data_i, mode='inference')
+
+    for i, data_i in tqdm(enumerate(dataloader_val), desc='Validation images generating') :
+        logit = trainer.model(data_i, mode='inference')
         valid_losses = {}
-        valid_losses['valid_L1'] = trainer.model.module.L1loss(fake_image, data_i.cuda().view(b*g, c, h, w)) * opt.lambda_rec
+        acc = cal_acc(logit, data_i['label'])
+        valid_losses['valid_CE'] = trainer.model.module.BCELoss(logit, data_i['label'].float().cuda()) * opt.lambda_ce
+        valid_losses['valid_Acc'] = acc
         visualizer.print_current_errors(epoch, iter_counter.epoch_iter,
                                         valid_losses, iter_counter.time_per_iter)
         visualizer.plot_current_errors(valid_losses, iter_counter.total_steps_so_far)
+        img_tensors = util.write_text_to_img(data_i['img_tensor'], logit, data_i['label'])
+        visuals = OrderedDict([('[Valid] Image with logit ', img_tensors),
 
-        visuals = OrderedDict([('valid_1_original', data_i.view(b*g, c, h, w)),
-                               ('valid_2_fake', fake_image),
-                               ('valid_3_diff', torch.abs(data_i.view(b*g, c, h, w) - fake_image.detach().cpu())),
                                ])
 
         visualizer.display_current_results(visuals, epoch, iter_counter.total_steps_so_far)
         break
+
+    if epoch % opt.save_epoch_freq == 0 or \
+       epoch == iter_counter.total_epochs:
+        print('saving the model at the end of epoch %d, iters %d' %
+              (epoch, iter_counter.total_steps_so_far))
+        trainer.save('latest')
+        trainer.save(epoch)

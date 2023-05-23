@@ -16,7 +16,7 @@ class ELDataset(BaseDataset) :
 
     @staticmethod
     def modify_commandline_options(parser, is_train) :
-        parser.set_defaults(load_size=(128, 128))
+        parser.set_defaults(load_size=(256, 512))
         parser.set_defaults(old_size=(7780, 3600))
         # parser.set_defaults(image_nc=3)
         # # parser.add_argument(pose_nc=41)
@@ -26,9 +26,11 @@ class ELDataset(BaseDataset) :
 
     def initialize(self, opt):
         self.opt = opt
+        self.dataroot = opt.dataroot
         self.phase = opt.phase
-        self.df, self.fault_name_list, self.nonfault_name_list = self.get_paths(opt)
-        size = len(self.nonfault_name_list) if self.phase == 'train' else len(self.fault_name_list)
+        self.df = self.get_paths(opt)
+
+        size = len(self.df)
         self.dataset_size = size
 
         if isinstance(opt.load_size, int):
@@ -43,42 +45,25 @@ class ELDataset(BaseDataset) :
         self.trans = transforms.Compose(transform_list)
 
     def get_paths(self, opt):
-        root = opt.dataroot
-        df = pd.read_csv(os.path.join(root, 'df_label.csv'))
-
-        self.fault_image_dir = os.path.join(root, f'fault')
-        self.nonfault_image_dir = os.path.join(root, f'non_fault')
-        fault_name_list = os.listdir(self.fault_image_dir)
-        nonfault_name_list = os.listdir(self.nonfault_image_dir)
-
-        return df, fault_name_list, nonfault_name_list
-
-
+        root = os.path.join(opt.dataroot, 'classification', self.phase)
+        df = pd.read_csv(os.path.join(root, 'data_df.csv'))
+        return df
 
     def __getitem__(self, index):
-        if self.phase == 'train' :
-            image_name = self.nonfault_name_list[index]
-            image_path = os.path.join(self.nonfault_image_dir, image_name)
-        else :
-            image_name = self.fault_name_list[index]
-            image_path = os.path.join(self.fault_image_dir, image_name)
+        filename, label = self.df.iloc[index]
+        label_str = 'fault' if label == 1 else 'non_fault'
+        image_path = os.path.join(self.dataroot, label_str, filename)
 
-        img = Image.open(image_path).convert("1")
+        img = Image.open(image_path).convert("L")
         img = self.edge_corp(img)
-        # 테두리 crop
+        img = F.resize(img, self.load_size)
+        img_tensor = self.trans(img)
+        label = torch.nn.functional.one_hot(torch.tensor(label), 2)
+        input_dict = {'img_tensor' : img_tensor,
+                      'label' : label,
+                      'filename': filename}
 
-        w, h = img.size
-        dw, dh = w / 26, h / 6
-        cells = []
-        for i in range(6) :
-            for j in range(26) :
-                cell = img.crop([j * dw, i * dh, (j+1) * dw, (i+1) * dh])
-                cell = F.resize(cell, self.load_size)
-                cell_tensor = self.trans(cell)
-                cells.append(cell_tensor)
-        cells = torch.stack(cells)
-
-        return cells
+        return input_dict
 
     def edge_corp(self, img):
         w, h = img.size
@@ -86,8 +71,8 @@ class ELDataset(BaseDataset) :
         img = img.crop([left, top, w-right, h-bot])
         w_crop, h_crop = img.size
 
-        img_left = img.crop([0, 0, w_crop // 2 - 25, h_crop])
-        img_right = img.crop([w_crop // 2 + 25, 0, w_crop, h_crop])
+        img_left = img.crop([0, 0, w_crop // 2 - (24 - 3), h_crop])
+        img_right = img.crop([w_crop // 2 + (24 - 3), 0, w_crop, h_crop])
 
         img = self.get_concat_h(img_left, img_right)
 
@@ -99,7 +84,7 @@ class ELDataset(BaseDataset) :
         return self.dataset_size
 
     def get_concat_h(self, im1, im2):
-        dst = Image.new('1', (im1.width + im2.width, im1.height))
+        dst = Image.new('L', (im1.width + im2.width, im1.height))
         dst.paste(im1, (0, 0))
         dst.paste(im2, (im1.width, 0))
         return dst

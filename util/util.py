@@ -4,7 +4,7 @@ Licensed under the CC BY-NC-SA 4.0 license (https://creativecommons.org/licenses
 """
 import torch
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 from torchvision.utils import make_grid
 import torch.nn.functional as F
 import torchvision.transforms as transforms
@@ -14,6 +14,34 @@ import json
 import cv2
 import math
 
+def write_text_to_img(img_tensor, logit, label) :
+
+    _, label = label.max(1)
+    logit = logit[torch.arange(logit.size(0)), label]
+    toPIL = transforms.ToPILImage()
+    toTensor = transforms.ToTensor()
+    trans = [transforms.ToTensor(),
+             transforms.Normalize(0.5,0.5)]
+    trans = transforms.Compose(trans)
+
+    output = []
+    for single_tensor, prob, true in zip(img_tensor, logit, label) :
+        img = toPIL((single_tensor + 1) / 2)
+        draw = ImageDraw.Draw(img)
+        prob = prob.detach().cpu().item()
+        true = true.cpu().item()
+        text = f'Prob: {round(prob, 3)} , True: {true}'
+        font_size = 40
+        text_color = 0  # 검은색 (0은 흑백 이미지에서의 검은색 값)
+        text_position = (int(img.width / 2), 10)  # 이미지 상단 중간 좌표 설정
+        font = ImageFont.load_default()  # 시스템 기본 폰트로 설정
+        text_width, text_height = draw.textsize(text, font=font)
+        text_position = (text_position[0] - int(text_width / 2), text_position[1])
+
+        draw.text(text_position, text, font_size=font_size, font=font, fill=text_color)
+        output.append(trans(img))
+    output = torch.cat(output, 0).unsqueeze(1)
+    return output
 
 def get_concat_h(imgs):
     width, height = imgs[0].size
