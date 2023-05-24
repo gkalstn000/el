@@ -1,6 +1,7 @@
 import sys
 from collections import OrderedDict
 from tqdm import tqdm
+import numpy as np
 
 import util.util as util
 from options.train_options import TrainOptions
@@ -50,7 +51,7 @@ for epoch in iter_counter.training_epochs():
 
         if iter_counter.needs_displaying():
             logit = trainer.get_latest_logit()
-            img_tensors = util.write_text_to_img(data_i['img_tensor'], logit, data_i['label'])
+            img_tensors = util.write_text_to_img(data_i['img_original'], logit, data_i['label'])
 
             visuals = OrderedDict([('Image with logit', img_tensors),
                                    ])
@@ -63,24 +64,37 @@ for epoch in iter_counter.training_epochs():
             iter_counter.record_current_iter()
         # break
 
-
-
-    for i, data_i in tqdm(enumerate(dataloader_val), desc='Validation images generating') :
+    preds = []
+    trues = []
+    for i, data_i in enumerate(tqdm(dataloader_val, desc='Validation images generating')) :
         logit = trainer.model(data_i, mode='inference')
-        valid_losses = {}
-        acc = cal_acc(logit, data_i['label'])
-        valid_losses['valid_CE'] = trainer.model.module.BCELoss(logit, data_i['label'].float().cuda()) * opt.lambda_ce
-        valid_losses['valid_Acc'] = acc
-        visualizer.print_current_errors(epoch, iter_counter.epoch_iter,
-                                        valid_losses, iter_counter.time_per_iter)
-        visualizer.plot_current_errors(valid_losses, iter_counter.total_steps_so_far)
-        img_tensors = util.write_text_to_img(data_i['img_tensor'], logit, data_i['label'])
-        visuals = OrderedDict([('[Valid] Image with logit ', img_tensors),
+        target = data_i['label']
+        _, pred = logit.max(1)
+        _, true = target.max(1)
 
-                               ])
+        preds += pred.cpu().tolist()
+        trues += true.cpu().tolist()
 
-        visualizer.display_current_results(visuals, epoch, iter_counter.total_steps_so_far)
-        break
+    pred_vector = torch.Tensor(preds)
+    true_vector = torch.Tensor(trues)
+
+    tp = torch.sum((pred_vector == 1) & (true_vector == 1))
+    tn = torch.sum((pred_vector == 0) & (true_vector == 0))
+    fp = torch.sum((pred_vector == 1) & (true_vector == 0))
+    fn = torch.sum((pred_vector == 0) & (true_vector == 1))
+
+    accuracy = (tp + tn) / (tp + tn + fp + fn)
+    precision = tp / (tp + fp)
+    recall = tp / (tp + fn)
+    f1 = 2 * (precision * recall) / (precision + recall)
+
+    valid_losses = {}
+    valid_losses['valid_Acc'] = accuracy
+    valid_losses['valid_precision'] = precision
+    valid_losses['valid_recall'] = recall
+    valid_losses['valid_f1'] = 2 * (precision * recall) / (precision + recall)
+
+    visualizer.plot_current_errors(valid_losses, iter_counter.total_steps_so_far)
 
     if epoch % opt.save_epoch_freq == 0 or \
        epoch == iter_counter.total_epochs:

@@ -16,7 +16,7 @@ class ELDataset(BaseDataset) :
 
     @staticmethod
     def modify_commandline_options(parser, is_train) :
-        parser.set_defaults(load_size=(256, 512))
+        parser.set_defaults(load_size=(256, 256))
         parser.set_defaults(old_size=(7780, 3600))
         # parser.set_defaults(image_nc=3)
         # # parser.add_argument(pose_nc=41)
@@ -56,27 +56,45 @@ class ELDataset(BaseDataset) :
 
         img = Image.open(image_path).convert("L")
         img = self.edge_corp(img)
-        img = F.resize(img, self.load_size)
-        img_tensor = self.trans(img)
+        img_tensor = self.split(img)
         label = torch.nn.functional.one_hot(torch.tensor(label), 2)
         input_dict = {'img_tensor' : img_tensor,
                       'label' : label,
-                      'filename': filename}
+                      'filename': filename,
+                      'img_original': self.trans(F.resize(img, (256, 512)))}
 
         return input_dict
 
     def edge_corp(self, img):
         w, h = img.size
-        left, top, right, bot = [61, 66, 58, 123]
+        left, top, right, bot = [59, 62, 60, 119]
         img = img.crop([left, top, w-right, h-bot])
-        w_crop, h_crop = img.size
 
-        img_left = img.crop([0, 0, w_crop // 2 - (24 - 3), h_crop])
-        img_right = img.crop([w_crop // 2 + (24 - 3), 0, w_crop, h_crop])
-
+        w_croped, h_croped = img.size
+        img_left = img.crop([0, 0, 3878 , h_croped])
+        img_right = img.crop([3927, 0, w_croped, h_croped])
         img = self.get_concat_h(img_left, img_right)
 
         return img
+    def split(self, img):
+        widths = [296, 295, 295, 293, 294, 293, 296, 291, 292, 292, 286, 286, 284, # left
+                  286, 286, 286, 292, 292, 291, 294, 292, 292, 292, 292, 293, 292] #right
+        space = [6, 7, 4, 8, 6, 6, 8, 8, 7, 8, 7, 7, 0,
+                 6, 7, 8, 7, 9, 7, 7, 8, 8, 8, 8, 8]
+        width, height = img.size
+        cell_height = 597
+        util.mkdirs('./results/tmp')
+        img_stacks = []
+        for h in range(6) :
+            from_ = 0
+            for i, (w, s) in enumerate(zip(widths, space)) :
+                to_ = from_ + w if from_ + w < width else width
+                single_cell = img.crop([from_, h * cell_height, to_, (h+1) * cell_height])
+                from_ = to_ + s
+                single_cell = F.resize(single_cell, self.load_size)
+                img_stacks.append(self.trans(single_cell))
+        return torch.cat(img_stacks, 0)
+
     def postprocess(self, input_dict):
         return input_dict
 

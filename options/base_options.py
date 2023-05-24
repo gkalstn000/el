@@ -31,7 +31,7 @@ class BaseOptions():
         # input/output sizes
         parser.add_argument('--dataset_mode', type=str, default='el')
         parser.add_argument('--batchSize', type=int, default=4, help='input batch size')
-        parser.add_argument('--image_nc', type=int, default=1, help='# of input image channels.')
+        parser.add_argument('--image_nc', type=int, default=150, help='# of input image channels.')
         parser.add_argument('--output_nc', type=int, default=1, help='# of output image channels')
         # for setting inputs
         parser.add_argument('--dataroot', type=str, default='/datasets/msha/el')
