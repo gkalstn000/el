@@ -22,7 +22,7 @@ class ClassifierModel(nn.Module) :
 
         # set loss functions
         if opt.isTrain:
-            self.BCELoss = torch.nn.BCELoss(weight=torch.Tensor([14/3000, 1]))
+            self.BCELoss = torch.nn.BCELoss()
 
     def forward(self, data, mode):
         img_tensor, label = self.preprocess_input(data)

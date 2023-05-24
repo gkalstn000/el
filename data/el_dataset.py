@@ -7,6 +7,7 @@ import torchvision.transforms.functional as F
 import torchvision.transforms as transforms
 import torch
 
+
 from tqdm import tqdm, trange
 import numpy as np
 import time
@@ -46,7 +47,8 @@ class ELDataset(BaseDataset) :
 
     def get_paths(self, opt):
         root = os.path.join(opt.dataroot, 'classification', self.phase)
-        df = pd.read_csv(os.path.join(root, 'data_df.csv'))
+        csv_filename = 'data_df_aug.csv' if self.phase == 'train' else 'data_df.csv'
+        df = pd.read_csv(os.path.join(root, csv_filename))
         return df
 
     def __getitem__(self, index):
@@ -55,15 +57,37 @@ class ELDataset(BaseDataset) :
         image_path = os.path.join(self.dataroot, label_str, filename)
 
         img = Image.open(image_path).convert("L")
-        img = self.edge_corp(img)
-        img_tensor = self.split(img)
+        if 'aug' not in filename :
+            img = self.edge_corp(img)
+            img_tensor = self.split(img)
+            img_tensor = self.reconstruct(img_tensor)
+        else :
+            img = F.resize(img, (256, 512))
+            img_tensor = self.trans(img)
+
         label = torch.nn.functional.one_hot(torch.tensor(label), 2)
+
         input_dict = {'img_tensor' : img_tensor,
                       'label' : label,
                       'filename': filename,
                       'img_original': self.trans(F.resize(img, (256, 512)))}
 
         return input_dict
+    def reconstruct(self, img_tensor):
+        nrow = 6
+        ncol = 26
+        toPIL = transforms.ToPILImage()
+        c, h, w = img_tensor.size()
+
+        reshaped = img_tensor.reshape(nrow, ncol, h, w)
+        reshaped = reshaped.permute(0, 2, 1, 3)
+        reshaped = reshaped.reshape(nrow*h, ncol*w)
+
+        pil_img = toPIL((reshaped + 1) / 2)
+        pil_img = F.resize(pil_img, (256, 512))
+
+
+        return self.trans(pil_img)
 
     def edge_corp(self, img):
         w, h = img.size
@@ -80,7 +104,7 @@ class ELDataset(BaseDataset) :
         widths = [296, 295, 295, 293, 294, 293, 296, 291, 292, 292, 286, 286, 284, # left
                   286, 286, 286, 292, 292, 291, 294, 292, 292, 292, 292, 293, 292] #right
         space = [6, 7, 4, 8, 6, 6, 8, 8, 7, 8, 7, 7, 0,
-                 6, 7, 8, 7, 9, 7, 7, 8, 8, 8, 8, 8]
+                 6, 7, 8, 7, 9, 7, 7, 8, 8, 8, 8, 8, 0]
         width, height = img.size
         cell_height = 597
         util.mkdirs('./results/tmp')

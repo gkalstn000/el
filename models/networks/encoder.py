@@ -80,7 +80,7 @@ class ELEncoder(BaseNetwork):
                                     nn.LeakyReLU(0.2, False),
                                     nn.MaxPool2d(kernel_size=2)
                                     )
-        dh, dw = 4, 4
+        dh, dw = 4, 8
         self.GAP = nn.AdaptiveAvgPool2d((dh, dw))
         self.fc_layer1 = nn.Sequential(nn.Linear(nf * 8 * dh * dw, 4096),
                                        nn.LeakyReLU(0.2, False),
@@ -97,12 +97,12 @@ class ELEncoder(BaseNetwork):
 
     def forward(self, x):
 
-        x = self.layer1(x)  # 256x256 -> 128x128
-        x = self.layer2(x)  # 128x128 -> 64x64
-        x = self.layer3(x)  # 64x64 -> 32x32
-        x = self.layer4(x)  # 32x32 -> 16x16
-        x = self.layer5(x)  # 16x16 -> 8x8
-        x = self.GAP(x) # 8x8 -> 4x4
+        x = self.layer1(x)  # 256x512 -> 128x256
+        x = self.layer2(x)  # 128x256 -> 64x128
+        x = self.layer3(x)  # 64x128 -> 32x64
+        x = self.layer4(x)  # 32x64 -> 16x32
+        x = self.layer5(x)  # 16x32 -> 8x16
+        x = self.GAP(x) # 8x16 -> 4x8
 
         x = x.view(x.size(0), -1)
         x = self.fc_layer1(x)
