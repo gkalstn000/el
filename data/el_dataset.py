@@ -6,6 +6,7 @@ import pandas as pd
 import torchvision.transforms.functional as F
 import torchvision.transforms as transforms
 import torch
+import random
 
 
 from tqdm import tqdm, trange
@@ -60,7 +61,7 @@ class ELDataset(BaseDataset) :
         if 'aug' not in filename :
             img = self.edge_corp(img)
             img_tensor = self.split(img)
-            img_tensor = self.reconstruct(img_tensor)
+            img_tensor = self.reconstruct(img_tensor, index)
         else :
             img = F.resize(img, (256, 512))
             img_tensor = self.trans(img)
@@ -73,11 +74,16 @@ class ELDataset(BaseDataset) :
                       'img_original': self.trans(F.resize(img, (256, 512)))}
 
         return input_dict
-    def reconstruct(self, img_tensor):
+    def reconstruct(self, img_tensor, index):
         nrow = 6
         ncol = 26
         toPIL = transforms.ToPILImage()
         c, h, w = img_tensor.size()
+
+        indices = list(range(nrow*ncol))
+        random.seed(index)
+        indices = random.sample(indices, len(indices))
+        img_tensor = img_tensor[indices]
 
         reshaped = img_tensor.reshape(nrow, ncol, h, w)
         reshaped = reshaped.permute(0, 2, 1, 3)

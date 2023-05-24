@@ -51,7 +51,7 @@ for epoch in iter_counter.training_epochs():
 
         if iter_counter.needs_displaying():
             logit = trainer.get_latest_logit()
-            img_tensors = util.write_text_to_img(data_i['img_original'], logit, data_i['label'])
+            img_tensors = util.write_text_to_img(data_i['img_tensor'], logit, data_i['label'])
 
             visuals = OrderedDict([('Image with logit', img_tensors),
                                    ])
