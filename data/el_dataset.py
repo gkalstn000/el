@@ -61,8 +61,6 @@ class ELDataset(BaseDataset) :
         img = self.edge_corp(img)
         img_tensor = self.split(img)
 
-        label = torch.nn.functional.one_hot(torch.tensor(label), 2)
-
         input_dict = {'img_tensor' : img_tensor,
                       'label' : label,
                       'filename': filename,
@@ -72,24 +70,13 @@ class ELDataset(BaseDataset) :
     def reconstruct(self, img_tensor, index):
         nrow = 6
         ncol = 26
-        toPIL = transforms.ToPILImage()
-        c, h, w = img_tensor.size()
-
-        if self.phase == 'train' :
-            indices = list(range(nrow * ncol))
-            random.seed(index)
-            indices = random.sample(indices, len(indices))
-            img_tensor = img_tensor[indices]
+        b, c, h, w = img_tensor.size()
 
         reshaped = img_tensor.reshape(nrow, ncol, h, w)
         reshaped = reshaped.permute(0, 2, 1, 3)
         reshaped = reshaped.reshape(nrow*h, ncol*w)
 
-        pil_img = toPIL((reshaped + 1) / 2)
-        pil_img = F.resize(pil_img, (256, 512))
-
-
-        return self.trans(pil_img)
+        return reshaped
 
     def edge_corp(self, img):
         w, h = img.size

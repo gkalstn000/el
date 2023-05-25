@@ -6,94 +6,80 @@ import torchvision.transforms as T
 from tqdm import tqdm
 from util import html, util
 import os
-
-import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
-from sklearn.metrics import confusion_matrix, classification_report
+from PIL import Image
 import pandas as pd
-from collections import defaultdict
+
+def reconstruct(img_tensor):
+    nrow = 6
+    ncol = 26
+    b, c, h, w = img_tensor.size()
+
+    reshaped = img_tensor.reshape(nrow, ncol, h, w)
+    reshaped = reshaped.permute(0, 2, 1, 3)
+    reshaped = reshaped.reshape(nrow * h, ncol * w)
+
+    return reshaped
+
+def get_concat_v(im1, im2):
+    dst = Image.new('L', (im1.width, im1.height + im2.height))
+    dst.paste(im1, (0, 0))
+    dst.paste(im2, (0, im1.height))
+    return dst
 
 opt = TestOptions().parse()
 dataloader = data.create_dataloader(opt)
 
-
-
 trans = T.ToPILImage()
 result_path = os.path.join(opt.results_dir, opt.id)
 util.mkdirs(result_path)
+vis_result_path = os.path.join(result_path, 'vis')
+util.mkdirs(vis_result_path)
 
-listdir = os.listdir(os.path.join(opt.checkpoints_dir, opt.id))
-score_df_list = []
 
-preds = defaultdict(list)
-trues = defaultdict(list)
+model = models.create_model(opt)
+model.eval()
 
-model_dict = {}
-for pre_train in listdir:
-    if 'net_E' not in pre_train: continue
-    epoch = pre_train.split('_')[0]
-    opt.which_epoch = epoch
-    util.mkdirs(os.path.join(result_path, f'vis_{epoch}'))
+dis_dict = {'filename' : [],
+            'label' : [],
+            'distance L2' : [],
+            'distance L1' : []}
 
-    model = models.create_model(opt)
-    model.eval()
-    model_dict[epoch] = model
-
+L1loss = torch.nn.L1Loss()
+L2loss = torch.nn.MSELoss()
+toPIL = T.ToPILImage()
 
 for i, data_i in enumerate(tqdm(dataloader)) :
-    # test
+    fake_image = model(data_i, mode='inference')
+    true_image = data_i['img_tensor']
 
-    for epoch, model in model_dict.items() :
+    L1 = L1loss(fake_image, true_image)
+    L2 = L2loss(fake_image, true_image)
 
-        logit = model(data_i, mode='inference')
-        target = data_i['label']
+    dis_dict['filename'].append(data_i['filename'][0])
+    dis_dict['label'].append(data_i['label'].int().item())
+    dis_dict['distance L1'].append(round(L1.cpu().item(), 3))
+    dis_dict['distance L2'].append(round(L2.cpu().item(), 3))
 
-        _, pred = logit.max(1)
-        _, true = target.max(1)
+    diff_image = torch.abs(true_image - fake_image)
 
-        preds[f'{epoch}'] += pred.cpu().tolist()
-        trues[f'{epoch}'] += true.cpu().tolist()
+    fake_image = reconstruct(fake_image)
+    true_image = reconstruct(true_image)
+    diff_image = reconstruct(diff_image)
 
-        img_tensors = util.write_text_to_img(data_i['img_tensor'], logit, data_i['label'])
-        img_tensors = (img_tensors + 1) / 2
-        filename = data_i['filename']
-        for k in range(img_tensors.shape[0]) :
-            el_image = trans(img_tensors[k].cpu())
-            el_image.save(os.path.join(result_path, f'vis_{epoch}' , filename[k]))
+    fake_image = toPIL((fake_image + 1) / 2)
+    true_image = toPIL((true_image + 1) / 2)
+    diff_image = toPIL(diff_image)
+
+    img = get_concat_v(true_image, diff_image)
+    img = get_concat_v(img, fake_image)
+
+    # img.save(os.path.join(vis_result_path, data_i['filename'][0]))
 
 
-for (epoch, pred), (_, true) in zip(preds.items(), trues.items()) :
 
+df = pd.DataFrame.from_dict(dis_dict)
+fault = df[df['label'] == 1]['distance L1']
+non_fault = df[df['label'] == 0]['distance L1']
 
-    pred_vector = np.array(pred)
-    true_vector = np.array(true)
+df.to_csv(os.path.join(result_path, 'dist.csv'))
 
-    # 이진 분류 평가 지표 계산
-    tp = np.sum((pred_vector == 1) & (true_vector == 1))
-    tn = np.sum((pred_vector == 0) & (true_vector == 0))
-    fp = np.sum((pred_vector == 1) & (true_vector == 0))
-    fn = np.sum((pred_vector == 0) & (true_vector == 1))
-
-    accuracy = (tp + tn) / (tp + tn + fp + fn)
-    precision = tp / (tp + fp)
-    recall = tp / (tp + fn)
-    f1 = 2 * (precision * recall) / (precision + recall)
-
-    cm = confusion_matrix(true_vector, pred_vector)
-
-    classes = ['Negative', 'Positive']
-    plt.figure(figsize=(6, 4))
-    sns.heatmap(cm, annot=True, cmap='Blues', fmt='d', xticklabels=classes, yticklabels=classes)
-    plt.title('Confusion Matrix')
-    plt.xlabel('Predicted Labels')
-    plt.ylabel('True Labels')
-    plt.savefig(os.path.join(result_path, f'confusion_matrix_{epoch}.png'))
-    plt.close()
-
-    df_score = pd.DataFrame({f'Score_{epoch}' : [round(accuracy, 3), round(precision, 3), round(recall, 3), round(f1, 3)]})
-    score_df_list.append(df_score)
-
-df = pd.concat(score_df_list, axis=1)
-df.index = ['Acc', 'Precision', 'Recall', 'F1']
-df.to_csv(os.path.join(result_path,f'score.csv'))
