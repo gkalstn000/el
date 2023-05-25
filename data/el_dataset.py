@@ -80,10 +80,11 @@ class ELDataset(BaseDataset) :
         toPIL = transforms.ToPILImage()
         c, h, w = img_tensor.size()
 
-        indices = list(range(nrow*ncol))
-        random.seed(index)
-        indices = random.sample(indices, len(indices))
-        img_tensor = img_tensor[indices]
+        if self.phase == 'train' :
+            indices = list(range(nrow * ncol))
+            random.seed(index)
+            indices = random.sample(indices, len(indices))
+            img_tensor = img_tensor[indices]
 
         reshaped = img_tensor.reshape(nrow, ncol, h, w)
         reshaped = reshaped.permute(0, 2, 1, 3)
