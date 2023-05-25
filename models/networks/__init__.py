@@ -6,7 +6,13 @@ import importlib
 
 def modify_commandline_options(parser, is_train):
     opt, _ = parser.parse_known_args()
-    netE_cls = find_network_using_name('el', 'encoder')
+
+    netG_cls = find_network_using_name(opt.netG, 'generator')
+    parser = netG_cls.modify_commandline_options(parser, is_train)
+    if is_train:
+        netD_cls = find_network_using_name(opt.netD, 'discriminator')
+        parser = netD_cls.modify_commandline_options(parser, is_train)
+    netE_cls = find_network_using_name(opt.netE, 'encoder')
     parser = netE_cls.modify_commandline_options(parser, is_train)
     return parser
 
@@ -55,6 +61,6 @@ def define_D(opt):
     return create_network(netD_cls, opt)
 
 def define_E(opt) :
-    netEn_c_cls = find_network_using_name('el', 'encoder')
+    netEn_c_cls = find_network_using_name(opt.netE, 'encoder')
     return create_network(netEn_c_cls, opt)
 

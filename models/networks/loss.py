@@ -226,16 +226,3 @@ class StyleLoss(nn.Module):
 class KLDLoss(nn.Module):
     def forward(self, mu, logvar):
         return -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
-
-class Accuracy() :
-    def __call__(self, logit, target):
-        _, pred = logit.max(1)
-        _, tgt = target.max(1)
-
-        pred = torch.round(pred.squeeze().detach().cpu())
-
-        correct = (pred == tgt).sum()
-        total = tgt.size(0)
-        accuracy = correct / total
-
-        return accuracy

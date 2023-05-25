@@ -5,3 +5,6 @@ nohup python train.py --tf_log --id classifier_stack --gpu_ids 3 --batchSize 40 
 
 
 nohup python train.py --tf_log --id classifier_flat_aug --gpu_ids 3 --batchSize 40 --num_workers 12 --continue_train   > classifier_flat_aug.out &
+
+nohup python train.py --tf_log --id anodetect_stack --gpu_ids 2 --batchSize 2 --num_workers 2   > anodetect_stack.out &
+

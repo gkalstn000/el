@@ -21,8 +21,12 @@ class BaseOptions():
         # experiment specifics
         parser.add_argument('--id', type=str, default='test', help='name of the experiment. It decides where to store samples and models')
         parser.add_argument('--name', type=str, default='test', help='name of the experiment. It decides where to store samples and models')
-        parser.add_argument('--model', type=str, default='classifier',help='name of the model.')
+        parser.add_argument('--model', type=str, default='anogan',help='name of the model.')
         parser.add_argument('--norm_E', type=str, default='spectralinstance',
+                            help='[spectralinstance|spectralbatch|spectralsyncbatch]')
+        parser.add_argument('--norm_G', type=str, default='spectralsyncbatch',
+                            help='[spectralinstance|spectralbatch|spectralsyncbatch]')
+        parser.add_argument('--norm_D', type=str, default='spectralinstance',
                             help='[spectralinstance|spectralbatch|spectralsyncbatch]')
         parser.add_argument('--gpu_ids', type=str, default='0', help='gpu ids: e.g. 0  0,1,2, 0,2. use -1 for CPU')
         parser.add_argument('--checkpoints_dir', type=str, default='./checkpoints', help='models are saved here')
@@ -45,7 +49,10 @@ class BaseOptions():
         parser.add_argument('--display_winsize', type=int, default=400, help='display window size')
 
         # for generator
-        parser.add_argument('--nef', type=int, default=64, help='# of encoder filters in first conv layer')
+        parser.add_argument('--netG', type=str, default='el', help='selects model to use for netG')
+        parser.add_argument('--netE', type=str, default='el', help='selects model to use for netG')
+        parser.add_argument('--ngf', type=int, default=16, help='# of gen filters in first conv layer')
+        parser.add_argument('--nef', type=int, default=16, help='# of encoder filters in first conv layer')
         parser.add_argument('--init_type', type=str, default='xavier', help='network initialization [normal|xavier|kaiming|orthogonal]')
         parser.add_argument('--init_variance', type=float, default=0.02, help='variance of the initialization distribution')
         parser.add_argument('--use_spect_g', action='store_false', help='use spectual normalization in generator')

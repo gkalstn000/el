@@ -13,7 +13,7 @@ class BaseGenerator(BaseNetwork) :
     @staticmethod
     def modify_commandline_options(parser, is_train):
         parser.add_argument('--activation', type=str, default='LeakyReLU', help='type of activation function')
-        parser.add_argument('--z_dim', type=int, default=16, help="dimension of the latent z vector")
+        parser.add_argument('--z_dim', type=int, default=128, help="dimension of the latent z vector")
         parser.set_defaults(img_f=512)
         return parser
     def __init__(self):
@@ -62,7 +62,7 @@ class ELGenerator(BaseGenerator) :
 
 
         final_nc = 2 * nf
-        self.conv_img = nn.Conv2d(final_nc, 3, 3, padding=1)
+        self.conv_img = nn.Conv2d(final_nc, 1, 3, padding=1)
 
         self.up = nn.Upsample(scale_factor=2)
 
