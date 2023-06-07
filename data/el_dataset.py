@@ -20,6 +20,7 @@ class ELDataset(BaseDataset) :
     def modify_commandline_options(parser, is_train) :
         parser.set_defaults(load_size=(256, 512))
         parser.set_defaults(old_size=(7780, 3600))
+        parser.add_argument('--augment', action='store_false')
         # parser.set_defaults(image_nc=3)
         # # parser.add_argument(pose_nc=41)
         # parser.set_defaults(display_winsize=256)
@@ -60,7 +61,8 @@ class ELDataset(BaseDataset) :
 
         img = Image.open(image_path).convert("L")
         img = self.crop_edge(img)
-        img = augment(img)
+        if self.opt.augment :
+            img = augment(img)
         img = F.resize(img, self.load_size)
 
         img_tensor = self.trans(img)
