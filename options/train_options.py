@@ -28,7 +28,7 @@ class TrainOptions(BaseOptions):
         parser.add_argument('--lr', type=float, default=0.0002, help='initial learning rate for adam')
 
         # for loss weights
-        parser.add_argument('--lambda_ce', type=float, default=0.5)
+        parser.add_argument('--lambda_ce', type=float, default=0.01)
 
 
         self.isTrain = True
