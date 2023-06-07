@@ -4,6 +4,7 @@ import os
 import util.util as util
 from tqdm import tqdm
 import random
+from tqdm import tqdm
 random.seed(1717)
 
 def split_filelist(filelist):
@@ -36,10 +37,27 @@ def concat_dict(dict1, dict2) :
              'label' : dict1['label'] + dict2['label']}
     return dict_
 
-mode = 'second'
+def integrity_check(root, filelist) :
+    output = []
+    for filepath in tqdm(filelist) :
+        try :
+            Image.open(os.path.join(root, filepath)).convert("L")
+        except Exception as e :
+            print(os.path.join(root, filepath), 'is error')
+
+        else :
+            output.append(filepath)
+    return output
+
+mode = 'first'
 dataroot = '/datasets/msha/el'
+
 fault_list = os.listdir(os.path.join(dataroot, mode, 'fault'))
 non_fault_list = os.listdir(os.path.join(dataroot, mode, 'non_fault'))
+
+fault_list = integrity_check(os.path.join(dataroot, mode, 'fault'), fault_list)
+non_fault_list = integrity_check(os.path.join(dataroot, mode, 'non_fault'), non_fault_list)
+
 
 train_non_fault_list, test_non_fault_list = split_filelist(non_fault_list)
 train_fault_list, test_fault_list = split_filelist(fault_list)

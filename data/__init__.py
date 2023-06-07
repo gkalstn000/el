@@ -49,6 +49,6 @@ def create_dataloader(opt, valid = False):
         batch_size=opt.batchSize,
         drop_last=opt.isTrain,
         num_workers= opt.num_workers if not valid else 1,
-        shuffle = opt.isTrain
+        shuffle = opt.phase
     )
     return dataloader

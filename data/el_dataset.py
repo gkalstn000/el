@@ -19,8 +19,7 @@ class ELDataset(BaseDataset) :
     @staticmethod
     def modify_commandline_options(parser, is_train) :
         parser.set_defaults(load_size=(256, 512))
-        parser.set_defaults(old_size=(7780, 3600))
-        parser.add_argument('--augment', action='store_false')
+        parser.add_argument('--no_augment', action='store_true')
         # parser.set_defaults(image_nc=3)
         # # parser.add_argument(pose_nc=41)
         # parser.set_defaults(display_winsize=256)
@@ -61,7 +60,7 @@ class ELDataset(BaseDataset) :
 
         img = Image.open(image_path).convert("L")
         img = self.crop_edge(img)
-        if self.opt.augment :
+        if self.phase == 'train' and not self.opt.no_augment and random.random() > 0.5 :
             img = augment(img)
         img = F.resize(img, self.load_size)
 
