@@ -16,8 +16,6 @@ import math
 
 def write_text_to_img(img_tensor, logit, label) :
 
-    _, label = label.max(1)
-    logit = logit[torch.arange(logit.size(0)), label]
     toPIL = transforms.ToPILImage()
     toTensor = transforms.ToTensor()
     trans = [transforms.ToTensor(),

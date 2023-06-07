@@ -100,9 +100,18 @@ class Visualizer():
 
     # errors: dictionary of error labels and values
     def plot_current_errors(self, errors, step):
+        layout = {"Scores": {
+            "Acc": ["Multiline", ["Acc/train", "Acc/test"]],
+            "Recall": ["Multiline", ["Recall/train", "Recall/test"]],
+            "Precision": ["Multiline", ["Precision/train", "Precision/test"]],
+            "F1": ["Multiline", ["F1/train", "F1/test"]],
+            },
+        }
+        self.writer.add_custom_scalars(layout)
         if self.tf_log:
             for tag, value in errors.items():
                 value = value.mean().float()
+
                 self.writer.add_scalar(tag, value.detach().cpu(), step)
                 self.writer.flush()
 

@@ -36,14 +36,10 @@ def concat_dict(dict1, dict2) :
              'label' : dict1['label'] + dict2['label']}
     return dict_
 
-
+mode = 'second'
 dataroot = '/datasets/msha/el'
-fault_list = os.listdir(os.path.join(dataroot, 'fault'))
-non_fault_list = os.listdir(os.path.join(dataroot, 'non_fault'))
-
-classification_root = os.path.join(dataroot, 'classification')
-anodetect_root = os.path.join(dataroot, 'anodetect')
-
+fault_list = os.listdir(os.path.join(dataroot, mode, 'fault'))
+non_fault_list = os.listdir(os.path.join(dataroot, mode, 'non_fault'))
 
 train_non_fault_list, test_non_fault_list = split_filelist(non_fault_list)
 train_fault_list, test_fault_list = split_filelist(fault_list)
@@ -58,8 +54,12 @@ classification_test_dict = concat_dict(test_non_fault_dict, test_fault_dict)
 anodetect_train_dict = train_non_fault_dict
 anodetect_test_dict = concat_dict(concat_dict(test_fault_dict, train_fault_dict), test_non_fault_dict)
 
-pd.DataFrame.from_dict(classification_train_dict).to_csv(os.path.join(dataroot, 'classification/train/data_df.csv'), index=False)
-pd.DataFrame.from_dict(classification_test_dict).to_csv(os.path.join(dataroot, 'classification/test/data_df.csv'), index=False)
-pd.DataFrame.from_dict(anodetect_train_dict).to_csv(os.path.join(dataroot, 'anodetect/train/data_df.csv'), index=False)
-pd.DataFrame.from_dict(anodetect_test_dict).to_csv(os.path.join(dataroot, 'anodetect/test/data_df.csv'), index=False)
+classification_train = pd.DataFrame.from_dict(classification_train_dict)
+classification_test = pd.DataFrame.from_dict(classification_test_dict)
+anodetect_train = pd.DataFrame.from_dict(anodetect_train_dict)
+anodetect_test = pd.DataFrame.from_dict(anodetect_test_dict)
 
+classification_train.to_csv(os.path.join(dataroot, f'classification/train/data_df_{mode}.csv'), index=False)
+classification_test.to_csv(os.path.join(dataroot, f'classification/test/data_df_{mode}.csv'), index=False)
+anodetect_train.to_csv(os.path.join(dataroot, f'anodetect/train/data_df_{mode}.csv'), index=False)
+anodetect_test.to_csv(os.path.join(dataroot, f'anodetect/test/data_df_{mode}.csv'), index=False)

@@ -22,7 +22,7 @@ class ClassifierModel(nn.Module) :
 
         # set loss functions
         if opt.isTrain:
-            self.BCELoss = torch.nn.BCELoss(weight=torch.Tensor([14/3000, 1]))
+            self.CELoss = torch.nn.CrossEntropyLoss()
 
     def forward(self, data, mode):
         img_tensor, label = self.preprocess_input(data)
@@ -56,6 +56,16 @@ class ClassifierModel(nn.Module) :
 
         return netE
     def preprocess_input(self, data):
+        img_tensor = data['img_tensor']
+        median, _ = img_tensor.median(0)
+        std = img_tensor.std(0) + 1e-6
+        img_tensor_norm = (img_tensor - median.unsqueeze(0)) / std.unsqueeze(0)
+
+        min = img_tensor_norm.min()
+        max = img_tensor_norm.max()
+        img_tensor_norm = ((img_tensor_norm - min) / (max - min) - 0.5) * 2
+
+
         if self.use_gpu():
             data['img_tensor'] = data['img_tensor'].float().cuda()
             data['label'] = data['label'].float().cuda()
@@ -66,7 +76,7 @@ class ClassifierModel(nn.Module) :
         E_losses = {}
 
         logit = self.netE(img_tensor)
-        E_losses['CrossEntropy'] = self.BCELoss(logit, label) * self.opt.lambda_ce
+        E_losses['CrossEntropy'] = self.CELoss(logit.squeeze(), label) * self.opt.lambda_ce
         return E_losses, logit
 
     def use_gpu(self):

@@ -92,8 +92,8 @@ class ELEncoder(BaseNetwork):
                                        nn.BatchNorm1d(2048),
                                        nn.Dropout(0.2),
                                        )
-        self.final_layer = nn.Linear(2048, 2)
-        self.softmax = nn.Softmax(1)
+        self.final_layer = nn.Linear(2048, 1)
+        self.sigmoid = nn.Sigmoid()
 
     def forward(self, x):
 
@@ -108,7 +108,7 @@ class ELEncoder(BaseNetwork):
         x = self.fc_layer1(x)
         x = self.fc_layer2(x)
         x = self.final_layer(x)
-        x = self.softmax(x)
+        x = self.sigmoid(x)
 
         return x
 

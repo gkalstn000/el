@@ -5,6 +5,7 @@ from torch.nn import Parameter
 import torchvision
 import torch.nn.functional as F
 import copy
+from sklearn.metrics import accuracy_score, recall_score, precision_score, f1_score
 
 
 ####################################################################################################
@@ -227,15 +228,17 @@ class KLDLoss(nn.Module):
     def forward(self, mu, logvar):
         return -0.5 * torch.sum(1 + logvar - mu.pow(2) - logvar.exp())
 
-class Accuracy() :
-    def __call__(self, logit, target):
-        _, pred = logit.max(1)
-        _, tgt = target.max(1)
+class Scores() :
+    def __call__(self, pred, true, type):
 
-        pred = torch.round(pred.squeeze().detach().cpu())
+        accuracy = accuracy_score(true, pred)
+        recall = recall_score(true, pred)
+        precision = precision_score(true, pred)
+        f1 = f1_score(true, pred)
 
-        correct = (pred == tgt).sum()
-        total = tgt.size(0)
-        accuracy = correct / total
+        score_dict = {f'Acc/{type}' : torch.tensor(accuracy),
+                      f'Recall/{type}': torch.tensor(recall),
+                      f'Precision/{type}': torch.tensor(precision),
+                      f'F1/{type}': torch.tensor(f1)}
 
-        return accuracy
+        return score_dict
