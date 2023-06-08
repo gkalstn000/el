@@ -25,10 +25,10 @@ class TrainOptions(BaseOptions):
         parser.add_argument('--optimizer', type=str, default='adam')
         parser.add_argument('--beta1', type=float, default=0.0, help='momentum term of adam')
         parser.add_argument('--beta2', type=float, default=0.9, help='momentum term of adam')
-        parser.add_argument('--lr', type=float, default=0.0002, help='initial learning rate for adam')
+        parser.add_argument('--lr', type=float, default=0.00002, help='initial learning rate for adam')
 
         # for loss weights
-        parser.add_argument('--lambda_ce', type=float, default=0.01)
+        parser.add_argument('--lambda_ce', type=float, default=0.05)
 
 
         self.isTrain = True

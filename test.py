@@ -77,3 +77,4 @@ df_score = pd.DataFrame({'Metric' : ['Acc', 'Precision', 'Recall', 'F1'],
               'Score' : [round(accuracy, 3), round(precision, 3), round(recall, 3), round(f1, 3)]})
 
 df_score.to_csv(os.path.join(result_path,'score.csv'))
+print(df_score)
