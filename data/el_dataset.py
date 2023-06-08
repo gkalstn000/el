@@ -79,7 +79,13 @@ class ELDataset(BaseDataset) :
             # edge 여백 crop
             img_array = img_array[:-58]
         else:
-            pass
+            left_start = [50, 55]
+            right_start = [50, 3978]
+            size = [3612, 3888]
+
+            left_array = img_array[left_start[0] : left_start[0] + size[0], left_start[1] : left_start[1] + size[1]]
+            right_array = img_array[right_start[0] : right_start[0] + size[0], right_start[1] : right_start[1] + size[1]]
+            img_array = np.concatenate([left_array, right_array], 1)
         return Image.fromarray(img_array)
 
     def postprocess(self, input_dict):

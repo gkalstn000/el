@@ -29,27 +29,35 @@ model.eval()
 # test
 preds = []
 trues = []
+names = []
+logits = []
 for i, data_i in enumerate(tqdm(dataloader)):
     logit = model(data_i, mode='inference')
     target = data_i['label']
 
-    _, pred = logit.max(1)
-    _, true = target.max(1)
+    trues.extend(target.tolist())
+    preds.extend(((logit > 0.5) * 1).squeeze().detach().cpu().tolist())
+    names.extend(data_i['filename'])
+    logits.extend((torch.round(logit * 1000) / 1000).squeeze().detach().cpu().tolist())
 
-    preds += pred.cpu().tolist()
-    trues += true.cpu().tolist()
+    img_tensors = util.write_text_to_img(data_i['img_tensor'], logit, data_i['label'])
+    img_tensors = (img_tensors + 1) / 2
+    filename = data_i['filename']
+    for k in range(img_tensors.shape[0]) :
 
-    # img_tensors = util.write_text_to_img(data_i['img_tensor'], logit, data_i['label'])
-    # img_tensors = (img_tensors + 1) / 2
-    # filename = data_i['filename']
-    # for k in range(img_tensors.shape[0]) :
-    #
-    #     el_image = trans(img_tensors[k].cpu())
-    #     el_image.save(os.path.join(result_path, 'vis' , filename[k]))
+        el_image = trans(img_tensors[k].cpu())
+        el_image.save(os.path.join(result_path, 'vis' , filename[k]))
 
 pred_vector = np.array(preds)
 true_vector = np.array(trues)
+logit_vector = np.array(logits)
 
+df_logit = pd.DataFrame({'filename': names,
+                         'pred' : logit_vector,
+                         'true' : true_vector,
+                         })
+
+df_logit = df_logit.sort_values(by=['pred', 'true'], ascending=[True, False])
 
 # 이진 분류 평가 지표 계산
 tp = np.sum((pred_vector == 1) & (true_vector == 1))
@@ -76,5 +84,6 @@ plt.close()
 df_score = pd.DataFrame({'Metric' : ['Acc', 'Precision', 'Recall', 'F1'],
               'Score' : [round(accuracy, 3), round(precision, 3), round(recall, 3), round(f1, 3)]})
 
-df_score.to_csv(os.path.join(result_path,'score.csv'))
+df_score.to_csv(os.path.join(result_path,'score.csv'), index=False)
+df_logit.to_csv(os.path.join(result_path, 'logit.csv'), index=False)
 print(df_score)
