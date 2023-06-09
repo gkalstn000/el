@@ -97,7 +97,7 @@ python test.py --id classifier_first_aug --gpu_ids 1 --batchSize 18 --num_worker
 ```
 실험 결과 `results/[실험ID]` 폴더내에 저장
 ```
-classifier_first_aug/
+[실험ID]/
 ├── confusion_matrix.png
 ├── logit.csv
 ├── score.csv
