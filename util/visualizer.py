@@ -134,10 +134,7 @@ class Visualizer():
         for key, t in visuals.items():
             t = t[:display_num]
             tile = self.opt.batchSize > 1
-            if 'bone' in key:
-                t = util.tensor2label(t, tile=tile)
-            else:
-                t = util.tensor2im(t, tile=tile)
+            t = util.tensor2im(t, tile=tile)
             visuals[key] = t
         return visuals
 

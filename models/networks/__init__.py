@@ -34,7 +34,6 @@ def find_network_using_name(target_network_name, filename):
 
     return network
 
-
 def create_network(cls, opt):
     net = cls(opt)
     net.print_network()
@@ -43,16 +42,6 @@ def create_network(cls, opt):
         net.cuda()
     net.init_weights(opt.init_type, opt.init_variance)
     return net
-
-
-def define_G(opt):
-    netG_cls = find_network_using_name(opt.netG, 'generator')
-    return create_network(netG_cls, opt)
-
-
-def define_D(opt):
-    netD_cls = find_network_using_name(opt.netD, 'discriminator')
-    return create_network(netD_cls, opt)
 
 def define_E(opt) :
     netEn_c_cls = find_network_using_name('el', 'encoder')

@@ -5,7 +5,6 @@ Licensed under the CC BY-NC-SA 4.0 license (https://creativecommons.org/licenses
 
 import torch.nn as nn
 from torch.nn import init
-import torch
 
 class BaseNetwork(nn.Module):
     def __init__(self):
