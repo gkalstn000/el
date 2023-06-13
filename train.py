@@ -11,6 +11,7 @@ from models.networks.loss import Scores
 import torch
 import data
 import time
+import numpy as np
 
 
 # parse options

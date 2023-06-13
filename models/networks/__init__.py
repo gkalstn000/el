@@ -44,6 +44,6 @@ def create_network(cls, opt):
     return net
 
 def define_E(opt) :
-    netEn_c_cls = find_network_using_name('el', 'encoder')
+    netEn_c_cls = find_network_using_name(opt.netE, 'encoder')
     return create_network(netEn_c_cls, opt)
 

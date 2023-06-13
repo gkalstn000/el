@@ -48,7 +48,7 @@ class ELDataset(BaseDataset) :
         img = Image.open(image_path).convert("L")
         # Image Pre-processing
         img = self.crop_edge(img)
-        if self.phase == 'train' and not self.opt.no_augment and random.random() > 0.5 :
+        if self.phase == 'train' and not self.opt.no_augment and random.random() > 0.5 : # 50% 확률로 Aug 할지 말지
             img = augment(img)
         img = F.resize(img, self.load_size)
         img_tensor = self.trans(img)

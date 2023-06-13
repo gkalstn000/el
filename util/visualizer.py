@@ -107,8 +107,8 @@ class Visualizer():
             "F1": ["Multiline", ["F1/train", "F1/test"]],
             },
         }
-        self.writer.add_custom_scalars(layout)
         if self.tf_log:
+            self.writer.add_custom_scalars(layout)
             for tag, value in errors.items():
                 value = value.mean().float()
 
