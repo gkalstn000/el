@@ -65,17 +65,6 @@ el
 
 ```
 
-### Red 에서 Dataset Download
-```Bash
-mkdir datasets
-cd datasets
-scp -r -P 7003 red@166.104.246.71:/datasets/msha/el .
-```
-
-### Local 에서 Server로 Dataset Upload
-```Bash
-scp -r -P [Port] ./datasets/el [Server_Addr]:[Remote_Path] 
-```
 
 ## Training 예시
 ```Bash
@@ -92,8 +81,6 @@ nohup tensorboard --logdir logs --port [Remote_Port_Num] &
 
 # Local Machine에서
 ssh -N -f -L localhost:[Local_Port_Num]:localhost:[Remote_Port_Num] [Server_IP_Addr] -p [Server_Port_Num]
-# Red 예시
-ssh -N -f -L localhost:16006:localhost:6006 minsu@166.104.246.71 -p 7003
 ```
 브라우저에서 `http://localhost:[Local_Port_Num]/` 으로 접속
 
